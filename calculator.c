@@ -30,6 +30,9 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
     regx->bit8 = bit8;
 }
 
+// Digunakan hanya untuk print nilai ke stdout
+#define toInt(R) (R.bit1<<7 + R.bit2<<6 + R.bit3<<5 + R.bit4<<4 + R.bit5<<3 + R.bit6<<2 + R.bit7<<1 + R.bit8)
+
 #define assign_0(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 0)
 #define assign_1(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 1)
 #define assign_2(R) assign(&R, 0, 0, 0, 0, 0, 0, 1, 0)
@@ -373,12 +376,14 @@ int main(int argc, char* argv[]){
 
     // while ((c = fgetc(file)) != EOF) {
     // }
-    assign_155(reg1);
+    assign_150(reg1);
     assign_100(reg2);
     
-    full_add(reg1, reg2, &reg3);
+    full_add(reg1, reg2, &reg1);
 
-    debug(reg3);
+    debug(reg1);
+
+    printf("%d\n", toInt(reg1));
 
     return 0;
 }
