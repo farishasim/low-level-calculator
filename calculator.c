@@ -31,7 +31,7 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
 }
 
 // Digunakan hanya untuk print nilai ke stdout
-#define toInt(R) (R.bit1<<7 + R.bit2<<6 + R.bit3<<5 + R.bit4<<4 + R.bit5<<3 + R.bit6<<2 + R.bit7<<1 + R.bit8)
+#define toInt(R) ((R.bit1<<7) + (R.bit2<<6) + (R.bit3<<5) + (R.bit4<<4) + (R.bit5<<3) + (R.bit6<<2) + (R.bit7<<1) + (R.bit8))
 
 #define assign_0(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 0)
 #define assign_1(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 1)
@@ -290,9 +290,9 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
 #define assign_254(R) assign(&R, 1, 1, 1, 1, 1, 1, 1, 0)
 #define assign_255(R) assign(&R, 1, 1, 1, 1, 1, 1, 1, 1)
 
-void bit_xor(unsigned int * bitx, unsigned int bit1, unsigned int bit2) {
-    *bitx = (bit1 || bit2) && !(bit2 && bit2);
-}
+// void bit_xor(unsigned int * bitx, unsigned int bit1, unsigned int bit2) {
+//     *bitx = (bit1 || bit2) && !(bit2 && bit2);
+// }
 
 void and(reg rega, reg regb, reg * rego) {
     rego->bit1 = rega.bit1 && regb.bit1;
@@ -327,11 +327,22 @@ void xor(reg rega, reg regb, reg * rego) {
     rego->bit8 = rega.bit8 != regb.bit8;
 }
 
+void not(reg regin, reg * regout) {
+    regout->bit1 = !regin.bit1;
+    regout->bit2 = !regin.bit2;
+    regout->bit3 = !regin.bit3;
+    regout->bit4 = !regin.bit4;
+    regout->bit5 = !regin.bit5;
+    regout->bit6 = !regin.bit6;
+    regout->bit7 = !regin.bit7;
+    regout->bit8 = !regin.bit8;
+}
+
 void full_add(reg rega, reg regb, reg * sum) {
     sum->bit7 = (rega.bit8 && regb.bit8); // put carry first
     sum->bit8 = rega.bit8 != regb.bit8; // a xor b
 
-    sum->bit6 = (rega.bit7 && regb.bit7) || (rega.bit7 || regb.bit7) && (sum->bit7);
+    sum->bit6 = (rega.bit7 && regb.bit7) || (rega.bit7 || regb.bit7) && (sum->bit7); // (a and b) or (a or b) and carry
     sum->bit7 = rega.bit7 != regb.bit7 != sum->bit7; // a xor b xor carry 
 
     sum->bit5 = (rega.bit6 && regb.bit6) || (rega.bit6 || regb.bit6) && (sum->bit6);
@@ -350,6 +361,13 @@ void full_add(reg rega, reg regb, reg * sum) {
     sum->bit2 = rega.bit2 != regb.bit2 != sum->bit2;
 
     sum->bit1 = rega.bit1 != regb.bit1 != sum->bit1;
+}
+
+void subtract(reg rega, reg regb, reg * diff) {
+    assign_1(*diff);                // diff = 1
+    not(regb, &regb);               // regb = ~regb
+    full_add(*diff, rega, diff);    // diff = diff + rega
+    full_add(*diff, regb, diff);    // diff = diff + regb
 }
 
 void debug(reg regx) {
@@ -376,10 +394,10 @@ int main(int argc, char* argv[]){
 
     // while ((c = fgetc(file)) != EOF) {
     // }
-    assign_150(reg1);
+    assign_0(reg1);
     assign_100(reg2);
     
-    full_add(reg1, reg2, &reg1);
+    subtract(reg1, reg2, &reg1);
 
     debug(reg1);
 
