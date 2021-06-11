@@ -2,14 +2,14 @@
 #include <stdlib.h>
 
 typedef struct {
-    unsigned int bit1 : 1;
+    unsigned int bit1 : 1; // msb
     unsigned int bit2 : 1;
     unsigned int bit3 : 1;
     unsigned int bit4 : 1;
     unsigned int bit5 : 1;
     unsigned int bit6 : 1;
     unsigned int bit7 : 1;
-    unsigned int bit8 : 1;
+    unsigned int bit8 : 1; // lsb
 } reg;
 
 reg reg1;
@@ -30,8 +30,8 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
     regx->bit8 = bit8;
 }
 
-// Digunakan hanya untuk print nilai ke stdout
-#define toInt(R) ((R.bit1<<7) + (R.bit2<<6) + (R.bit3<<5) + (R.bit4<<4) + (R.bit5<<3) + (R.bit6<<2) + (R.bit7<<1) + (R.bit8))
+// operator '+' digunakan hanya untuk print nilai ke stdout
+#define to_int(R) ((R.bit1<<7) + (R.bit2<<6) + (R.bit3<<5) + (R.bit4<<4) + (R.bit5<<3) + (R.bit6<<2) + (R.bit7<<1) + (R.bit8))
 
 #define assign_0(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 0)
 #define assign_1(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 1)
@@ -290,6 +290,16 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
 #define assign_254(R) assign(&R, 1, 1, 1, 1, 1, 1, 1, 0)
 #define assign_255(R) assign(&R, 1, 1, 1, 1, 1, 1, 1, 1)
 
+#define is_zero(R) (!(R.bit1 || R.bit2 || R.bit3 || R.bit4 || R.bit5 || R.bit6 || R.bit7 || R.bit8))
+#define eq(R1, R2) (R1.bit1 == R2.bit1 && \
+                    R1.bit2 == R2.bit2 && \
+                    R1.bit3 == R2.bit3 && \
+                    R1.bit4 == R2.bit4 && \
+                    R1.bit5 == R2.bit5 && \
+                    R1.bit6 == R2.bit6 && \
+                    R1.bit7 == R2.bit7 && \
+                    R1.bit8 == R2.bit8)
+
 // void bit_xor(unsigned int * bitx, unsigned int bit1, unsigned int bit2) {
 //     *bitx = (bit1 || bit2) && !(bit2 && bit2);
 // }
@@ -338,6 +348,86 @@ void not(reg regin, reg * regout) {
     regout->bit8 = !regin.bit8;
 }
 
+void incr(reg* regx) {
+    if (regx->bit8) { // ada carry
+        if (regx->bit7) {
+            if (regx->bit6) {
+                if (regx->bit5) {
+                    if (regx->bit4) {
+                        if (regx->bit3) {
+                            if (regx->bit2) {
+                                regx->bit1 = !regx->bit1;
+                            }
+                            regx->bit2 = !regx->bit2;
+                        }
+                        regx->bit3 = !regx->bit3;
+                    }
+                    regx->bit4 = !regx->bit4;
+                }
+                regx->bit5 = !regx->bit5;
+            }
+            regx->bit6 = !regx->bit6;
+        }
+        regx->bit7 = !regx->bit7;
+    } 
+    regx->bit8 = !regx->bit8;
+}
+
+void decr(reg* regx) {
+    if (!regx->bit8) { // ada carry
+        if (!regx->bit7) {
+            if (!regx->bit6) {
+                if (!regx->bit5) {
+                    if (!regx->bit4) {
+                        if (!regx->bit3) {
+                            if (!regx->bit2) {
+                                regx->bit1 = !regx->bit1;
+                            }
+                            regx->bit2 = !regx->bit2;
+                        }
+                        regx->bit3 = !regx->bit3;
+                    }
+                    regx->bit4 = !regx->bit4;
+                }
+                regx->bit5 = !regx->bit5;
+            }
+            regx->bit6 = !regx->bit6;
+        }
+        regx->bit7 = !regx->bit7;
+    } 
+    regx->bit8 = !regx->bit8;
+}
+
+void shl(reg * rega, reg fac) {
+    if (!is_zero(fac)) {
+        rega->bit1 = rega->bit2;
+        rega->bit2 = rega->bit3;
+        rega->bit3 = rega->bit4;
+        rega->bit4 = rega->bit5;
+        rega->bit5 = rega->bit6;
+        rega->bit6 = rega->bit7;
+        rega->bit7 = rega->bit8;
+        rega->bit8 = 0;
+        decr(&fac);
+        shl(rega, fac);
+    } 
+}
+
+void shr(reg * rega, reg fac) {
+    if (!is_zero(fac)) {
+        rega->bit8 = rega->bit7;
+        rega->bit7 = rega->bit6;
+        rega->bit6 = rega->bit5;
+        rega->bit5 = rega->bit4;
+        rega->bit4 = rega->bit3;
+        rega->bit3 = rega->bit2;
+        rega->bit2 = rega->bit1;
+        rega->bit1 = 0;
+        decr(&fac);
+        shr(rega, fac);
+    } 
+}
+
 void full_add(reg rega, reg regb, reg * sum) {
     sum->bit7 = (rega.bit8 && regb.bit8); // put carry first
     sum->bit8 = rega.bit8 != regb.bit8; // a xor b
@@ -370,7 +460,21 @@ void subtract(reg rega, reg regb, reg * diff) {
     full_add(*diff, regb, diff);    // diff = diff + regb
 }
 
-void debug(reg regx) {
+void mul(reg rega, reg regb, reg * res){
+    assign_0(*res);                 // res = 0
+    if (is_zero(rega) || is_zero(regb)) return;
+
+    loop:
+        full_add(*res, rega, res);  // res = res + rega
+        decr(&regb);                // regb--
+    if (!is_zero(regb)) goto loop;
+}
+
+void div(reg rega, reg regb, reg * res) {
+    
+}
+
+void print_reg(reg regx) {
     printf("%d", regx.bit1);
     printf("%d", regx.bit2);
     printf("%d", regx.bit3);
@@ -380,6 +484,7 @@ void debug(reg regx) {
     printf("%d", regx.bit7);
     printf("%d", regx.bit8);
     printf("\n");
+    printf("%d\n", to_int(regx));
 }
 
 int main(int argc, char* argv[]){
@@ -394,14 +499,12 @@ int main(int argc, char* argv[]){
 
     // while ((c = fgetc(file)) != EOF) {
     // }
-    assign_0(reg1);
-    assign_100(reg2);
+    assign_3(reg1);
+    assign_45(reg2);
     
-    subtract(reg1, reg2, &reg1);
+    mul(reg1, reg2, &reg1);
 
-    debug(reg1);
-
-    printf("%d\n", toInt(reg1));
+    print_reg(reg1);
 
     return 0;
 }
