@@ -33,6 +33,19 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
 // operator '+' digunakan hanya untuk print nilai ke stdout
 #define to_int(R) ((R.bit1<<7) + (R.bit2<<6) + (R.bit3<<5) + (R.bit4<<4) + (R.bit5<<3) + (R.bit6<<2) + (R.bit7<<1) + (R.bit8))
 
+void print_reg(reg regx) {
+    printf("%d", regx.bit1);
+    printf("%d", regx.bit2);
+    printf("%d", regx.bit3);
+    printf("%d", regx.bit4);
+    printf("%d", regx.bit5);
+    printf("%d", regx.bit6);
+    printf("%d", regx.bit7);
+    printf("%d", regx.bit8);
+    printf("\n");
+    printf("%d\n", to_int(regx));
+}
+
 #define assign_0(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 0)
 #define assign_1(R) assign(&R, 0, 0, 0, 0, 0, 0, 0, 1)
 #define assign_2(R) assign(&R, 0, 0, 0, 0, 0, 0, 1, 0)
@@ -563,17 +576,32 @@ void mods(reg rega, reg regb, reg * res) {
         cpy(rega, res);                 // res = rega
 }
 
-void print_reg(reg regx) {
-    printf("%d", regx.bit1);
-    printf("%d", regx.bit2);
-    printf("%d", regx.bit3);
-    printf("%d", regx.bit4);
-    printf("%d", regx.bit5);
-    printf("%d", regx.bit6);
-    printf("%d", regx.bit7);
-    printf("%d", regx.bit8);
-    printf("\n");
-    printf("%d\n", to_int(regx));
+void pows(reg rega, reg regb, reg * res) {
+    assign_1(*res);                 // res = 1
+    if (is_zero(rega) || is_zero(regb)) return;
+
+    loop:                           // repeat:
+        mul(*res, rega, res);       //      res = res * rega
+        decr(&regb);                //      regb--
+    if (!is_zero(regb)) goto loop;  // until: regb == 0
+}
+
+void sqrts(reg rega, reg temp, reg * res) {
+    assign_0(*res);
+
+    loop:
+        mul(*res, *res, &temp);
+        if (eq(temp, rega)) {
+            goto exit;
+        } 
+        gt(temp, rega);
+        if (reg4.bit1) {
+            decr(res);
+            goto exit;
+        }
+        incr(res);
+        goto loop;
+    exit: return;
 }
 
 int main(int argc, char* argv[]){
@@ -588,10 +616,11 @@ int main(int argc, char* argv[]){
 
     // while ((c = fgetc(file)) != EOF) {
     // }
-    assign_51(reg1);
-    assign_255(reg2);
+    assign_65(reg1);
+    assign_1(reg2);
     
-    mods(reg2, reg1, &reg1);
+    // mul(reg1, reg2, &reg1);
+    sqrts(reg1, reg2, &reg1);
 
     print_reg(reg1);
 
