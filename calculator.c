@@ -12,10 +12,10 @@ typedef struct {
     unsigned int bit8 : 1; // lsb
 } reg;
 
-reg reg1;
-reg reg2;
-reg reg3;
-reg reg4;
+reg reg1; // accumulator, general-purpose
+reg reg2; // general-purpose
+reg reg3; // general-purpose
+reg reg4; // flag
 
 void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3, 
     unsigned int bit4, unsigned int bit5, unsigned int bit6, unsigned int bit7,  
@@ -300,6 +300,64 @@ void assign(reg * regx, unsigned int bit1, unsigned int bit2, unsigned int bit3,
                     R1.bit7 == R2.bit7 && \
                     R1.bit8 == R2.bit8)
 
+void lt(reg rega, reg regb) {
+    if (rega.bit1 == regb.bit1) {
+        if (rega.bit2 == regb.bit2) {
+            if (rega.bit3 == regb.bit3) {
+                if (rega.bit4 == regb.bit4) {
+                    if (rega.bit5 == regb.bit5) {
+                        if (rega.bit6 == regb.bit6) {
+                            if (rega.bit7 == regb.bit7) {
+                                reg4.bit1 = rega.bit8 < regb.bit8;
+                            } else 
+                                reg4.bit1 = rega.bit7 < regb.bit7;
+                        } else 
+                            reg4.bit1 = rega.bit6 < regb.bit6;
+                    } else 
+                        reg4.bit1 = rega.bit5 < regb.bit5;
+                } else 
+                    reg4.bit1 = rega.bit4 < regb.bit4;
+            } else 
+                reg4.bit1 = rega.bit3 < regb.bit3;
+        } else 
+            reg4.bit1 = rega.bit2 < regb.bit2;
+    } else 
+        reg4.bit1 = rega.bit1 < regb.bit1;
+}
+
+void le(reg rega, reg regb) {
+    if (rega.bit1 == regb.bit1) {
+        if (rega.bit2 == regb.bit2) {
+            if (rega.bit3 == regb.bit3) {
+                if (rega.bit4 == regb.bit4) {
+                    if (rega.bit5 == regb.bit5) {
+                        if (rega.bit6 == regb.bit6) {
+                            if (rega.bit7 == regb.bit7) {
+                                reg4.bit1 = rega.bit8 <= regb.bit8;
+                            } else 
+                                reg4.bit1 = rega.bit7 < regb.bit7;
+                        } else 
+                            reg4.bit1 = rega.bit6 < regb.bit6;
+                    } else 
+                        reg4.bit1 = rega.bit5 < regb.bit5;
+                } else 
+                    reg4.bit1 = rega.bit4 < regb.bit4;
+            } else 
+                reg4.bit1 = rega.bit3 < regb.bit3;
+        } else 
+            reg4.bit1 = rega.bit2 < regb.bit2;
+    } else 
+        reg4.bit1 = rega.bit1 < regb.bit1;
+}
+
+void gt(reg rega, reg regb) {
+    le(regb, rega);
+}
+
+void ge(reg rega, reg regb) {
+    lt(regb, rega);
+}
+
 // void bit_xor(unsigned int * bitx, unsigned int bit1, unsigned int bit2) {
 //     *bitx = (bit1 || bit2) && !(bit2 && bit2);
 // }
@@ -346,6 +404,17 @@ void not(reg regin, reg * regout) {
     regout->bit6 = !regin.bit6;
     regout->bit7 = !regin.bit7;
     regout->bit8 = !regin.bit8;
+}
+
+void cpy(reg regin, reg * regout) {
+    regout->bit1 = regin.bit1;
+    regout->bit2 = regin.bit2;
+    regout->bit3 = regin.bit3;
+    regout->bit4 = regin.bit4;
+    regout->bit5 = regin.bit5;
+    regout->bit6 = regin.bit6;
+    regout->bit7 = regin.bit7;
+    regout->bit8 = regin.bit8;
 }
 
 void incr(reg* regx) {
@@ -464,14 +533,34 @@ void mul(reg rega, reg regb, reg * res){
     assign_0(*res);                 // res = 0
     if (is_zero(rega) || is_zero(regb)) return;
 
-    loop:
-        full_add(*res, rega, res);  // res = res + rega
-        decr(&regb);                // regb--
-    if (!is_zero(regb)) goto loop;
+    loop:                           // repeat:
+        full_add(*res, rega, res);  //      res = res + rega
+        decr(&regb);                //      regb--
+    if (!is_zero(regb)) goto loop;  // until: regb == 0
 }
 
-void div(reg rega, reg regb, reg * res) {
+void divs(reg rega, reg regb, reg * res) {
+    assign_0(*res);                     // res = 0
+    // asumsi selalu regb != 0
     
+    loop:
+        lt(rega, regb);                 // test rega < regb
+        if (reg4.bit1) goto exit;       // if flag set, break
+        subtract(rega, regb, &rega);    // rega = rega - regb
+        incr(res);                      // res++
+        goto loop;
+
+    exit: return;
+}
+
+void mods(reg rega, reg regb, reg * res) {
+    loop:
+        lt(rega, regb);                 // test rega < regb
+        if (reg4.bit1) goto exit;       // if flag set, break
+        subtract(rega, regb, &rega);    // rega = rega - regb
+        goto loop;
+    exit:
+        cpy(rega, res);                 // res = rega
 }
 
 void print_reg(reg regx) {
@@ -499,10 +588,10 @@ int main(int argc, char* argv[]){
 
     // while ((c = fgetc(file)) != EOF) {
     // }
-    assign_3(reg1);
-    assign_45(reg2);
+    assign_51(reg1);
+    assign_255(reg2);
     
-    mul(reg1, reg2, &reg1);
+    mods(reg2, reg1, &reg1);
 
     print_reg(reg1);
 
