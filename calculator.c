@@ -304,6 +304,8 @@ void print_reg(reg regx) {
 #define assign_255(R) assign(&R, 1, 1, 1, 1, 1, 1, 1, 1)
 
 #define is_zero(R) (!(R.bit1 || R.bit2 || R.bit3 || R.bit4 || R.bit5 || R.bit6 || R.bit7 || R.bit8))
+#define is_max(R) (R.bit1 && R.bit2 && R.bit3 && R.bit4 && R.bit5 && R.bit6 && R.bit7 && R.bit8)
+
 #define eq(R1, R2) (R1.bit1 == R2.bit1 && \
                     R1.bit2 == R2.bit2 && \
                     R1.bit3 == R2.bit3 && \
@@ -589,8 +591,9 @@ void pows(reg rega, reg regb, reg * res) {
 void sqrts(reg rega, reg temp, reg * res) {
     assign_0(*res);
 
+    mul(*res, *res, &temp);
+
     loop:
-        mul(*res, *res, &temp);
         if (eq(temp, rega)) {
             goto exit;
         } 
@@ -600,6 +603,11 @@ void sqrts(reg rega, reg temp, reg * res) {
             goto exit;
         }
         incr(res);
+        mul(*res, *res, &temp);
+        if (is_zero(temp)) {    // ada overflow ketika res = 16,
+            decr(res);          // looping dihentikan dengan res = 15;
+            goto exit;
+        }
         goto loop;
     exit: return;
 }
