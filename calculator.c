@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define BLANK ' '
+
 typedef struct {
     unsigned int bit1 : 1; // msb
     unsigned int bit2 : 1;
@@ -612,23 +614,163 @@ void sqrts(reg rega, reg temp, reg * res) {
     exit: return;
 }
 
+void digit_to_reg(char c, reg * reg) {
+    // asumsi : '0' < c < '9'
+    switch (c)
+    {
+    case '0':
+        assign_0(*reg);
+        break;
+    case '1':
+        assign_1(*reg);
+        break;
+    case '2':
+        assign_2(*reg);
+        break;
+    case '3':
+        assign_3(*reg);
+        break;
+    case '4':
+        assign_4(*reg);
+        break;
+    case '5':
+        assign_5(*reg);
+        break;
+    case '6':
+        assign_6(*reg);
+        break;
+    case '7':
+        assign_7(*reg);
+        break;
+    case '8':
+        assign_8(*reg);
+        break;
+    case '9':
+        assign_9(*reg);
+        break;
+    default:
+        break;
+    }
+}
+
+void set_operator(char c) {
+    switch (c)
+    {
+    case '+':
+        reg4.bit2 = 0;
+        reg4.bit3 = 0;
+        reg4.bit4 = 0;
+        break;
+    case '-':
+        reg4.bit2 = 0;
+        reg4.bit3 = 0;
+        reg4.bit4 = 1;
+        break;
+    case '*':
+        reg4.bit2 = 0;
+        reg4.bit3 = 1;
+        reg4.bit4 = 0;
+        break;
+    case '/':
+        reg4.bit2 = 0;
+        reg4.bit3 = 1;
+        reg4.bit4 = 1;
+        break;
+    case '%':
+        reg4.bit2 = 1;
+        reg4.bit3 = 0;
+        reg4.bit4 = 0;
+        break;
+    case '^':
+        reg4.bit2 = 1;
+        reg4.bit3 = 0;
+        reg4.bit4 = 1;
+        break;
+    case 'r':
+        reg4.bit2 = 1;
+        reg4.bit3 = 1;
+        reg4.bit4 = 0;
+        break;
+    default:
+        break;
+    }
+}
+
+#define is_add (!reg4.bit2 && !reg4.bit3 && !reg4.bit4)
+#define is_sub (!reg4.bit2 && !reg4.bit3 && reg4.bit4)
+#define is_mul (!reg4.bit2 && reg4.bit3 && !reg4.bit4)
+#define is_div (!reg4.bit2 && reg4.bit3 && reg4.bit4)
+#define is_mod (reg4.bit2 && !reg4.bit3 && !reg4.bit4)
+#define is_pow (reg4.bit2 && !reg4.bit3 && reg4.bit4)
+#define is_sqr (reg4.bit2 && reg4.bit3 && !reg4.bit4)
+
+void debug() {
+    printf("=== DEBUG ===\n");
+                print_reg(reg1);
+                print_reg(reg2);
+                print_reg(reg3);
+}
+
 int main(int argc, char* argv[]){
     
-    // FILE *file = fopen(argv[1], "r");
-    // char c;
+    FILE *file = fopen(argv[1], "r");
+    char c;
 
-    // if (file == NULL) {
-    //     printf("File not found!\n");
-    //     exit(1);
-    // }
+    if (file == NULL) {
+        printf("File not found!\n");
+        exit(1);
+    }
 
-    // while ((c = fgetc(file)) != EOF) {
-    // }
-    assign_65(reg1);
-    assign_1(reg2);
+    assign_0(reg1);
+    assign_10(reg2);
+
+    while ((c = fgetc(file)) != BLANK && c != EOF) {
+        mul(reg1, reg2, &reg1);
+        digit_to_reg(c, &reg2);
+        full_add(reg1, reg2, &reg1);
+        assign_10(reg2);
+    }
+
+    assign_0(reg3);
+
+    while ((c = fgetc(file)) != EOF) {
+        while (c == BLANK && c != EOF) c = fgetc(file); // skip blank
+        if (c != EOF) {
+            set_operator(c);
+            c = fgetc(file);
+            while (c == BLANK && c != EOF) c = fgetc(file); // skip blank
+            if (c != EOF) {
+                while (c != BLANK && c != EOF) {
+                    // print_reg(reg3);
+                    mul(reg3, reg2, &reg3);
+                    digit_to_reg(c, &reg2);
+                    full_add(reg3, reg2, &reg3);
+                    assign_10(reg2);
+                    c = fgetc(file);
+                }
+                // debug();
+                if (is_add) {
+                    full_add(reg1, reg3, &reg1);
+                } 
+                else if (is_sub) {
+                    subtract(reg1, reg3, &reg1);
+                } 
+                else if (is_mul) {
+                    mul(reg1, reg3, &reg1);
+                }
+                else if (is_div) {
+                    divs(reg1, reg3, &reg1);
+                }
+                assign_0(reg3);
+            }
+        }
+    }
+
+    // assign_65(reg1);
+    // assign_1(reg2);
     
-    // mul(reg1, reg2, &reg1);
-    sqrts(reg1, reg2, &reg1);
+    // // mul(reg1, reg2, &reg1);
+    // sqrts(reg1, reg2, &reg1);
 
     print_reg(reg1);
 
