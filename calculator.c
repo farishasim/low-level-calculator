@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #define BLANK ' '
+#define SQRT 'r'
 
 typedef struct {
     unsigned int bit1 : 1; // msb
@@ -653,6 +654,14 @@ void digit_to_reg(char c, reg * reg) {
     }
 }
 
+void insert_digit(reg rega, char c, reg * regout) {
+    cpy(rega, regout);                  // regout = rega
+    assign_10(rega);                    // rega = 10
+    mul(*regout, rega, regout);         // regout = regout * rega
+    digit_to_reg(c, &rega);             // rega = int(c)
+    full_add(*regout, rega, regout);    // regout = regout + rega
+}
+
 void set_operator(char c) {
     switch (c)
     {
@@ -660,37 +669,43 @@ void set_operator(char c) {
         reg4.bit2 = 0;
         reg4.bit3 = 0;
         reg4.bit4 = 0;
+        reg4.bit5 = 0;
         break;
     case '-':
         reg4.bit2 = 0;
         reg4.bit3 = 0;
         reg4.bit4 = 1;
+        reg4.bit5 = 0;
         break;
     case '*':
         reg4.bit2 = 0;
         reg4.bit3 = 1;
         reg4.bit4 = 0;
+        reg4.bit5 = 0;
         break;
     case '/':
         reg4.bit2 = 0;
         reg4.bit3 = 1;
         reg4.bit4 = 1;
+        reg4.bit5 = 0;
         break;
     case '%':
         reg4.bit2 = 1;
         reg4.bit3 = 0;
         reg4.bit4 = 0;
+        reg4.bit5 = 0;
         break;
     case '^':
-        reg4.bit2 = 1;
-        reg4.bit3 = 0;
-        reg4.bit4 = 1;
+        // reg4.bit2 = 1;
+        // reg4.bit3 = 0;
+        // reg4.bit4 = 1;
+        reg4.bit5 = 1;
         break;
-    case 'r':
-        reg4.bit2 = 1;
-        reg4.bit3 = 1;
-        reg4.bit4 = 0;
-        break;
+    // case 'r':
+    //     reg4.bit2 = 1;
+    //     reg4.bit3 = 1;
+    //     reg4.bit4 = 0;
+    //     break;
     default:
         break;
     }
@@ -701,8 +716,9 @@ void set_operator(char c) {
 #define is_mul (!reg4.bit2 && reg4.bit3 && !reg4.bit4)
 #define is_div (!reg4.bit2 && reg4.bit3 && reg4.bit4)
 #define is_mod (reg4.bit2 && !reg4.bit3 && !reg4.bit4)
-#define is_pow (reg4.bit2 && !reg4.bit3 && reg4.bit4)
-#define is_sqr (reg4.bit2 && reg4.bit3 && !reg4.bit4)
+#define is_pow (reg4.bit5)
+// #define is_pow (reg4.bit2 && !reg4.bit3 && reg4.bit4)
+// #define is_sqr (reg4.bit2 && reg4.bit3 && !reg4.bit4)
 
 void debug() {
     printf("=== DEBUG ===\n");
@@ -722,16 +738,12 @@ int main(int argc, char* argv[]){
     }
 
     assign_0(reg1);
-    assign_10(reg2);
 
     while ((c = fgetc(file)) != BLANK && c != EOF) {
-        mul(reg1, reg2, &reg1);
-        digit_to_reg(c, &reg2);
-        full_add(reg1, reg2, &reg1);
-        assign_10(reg2);
+        insert_digit(reg1, c, &reg1);
     }
 
-    assign_0(reg3);
+    cpy(reg1, &reg3);
 
     while ((c = fgetc(file)) != EOF) {
         while (c == BLANK && c != EOF) c = fgetc(file); // skip blank
@@ -740,15 +752,15 @@ int main(int argc, char* argv[]){
             c = fgetc(file);
             while (c == BLANK && c != EOF) c = fgetc(file); // skip blank
             if (c != EOF) {
+                if (is_pow) goto pow_calc;
+                assign_0(reg3);
+                if (c == 'r') goto sqrt_calc; // kalo ketemu 'r'
                 while (c != BLANK && c != EOF) {
-                    // print_reg(reg3);
-                    mul(reg3, reg2, &reg3);
-                    digit_to_reg(c, &reg2);
-                    full_add(reg3, reg2, &reg3);
-                    assign_10(reg2);
+                    insert_digit(reg3, c, &reg3);
                     c = fgetc(file);
                 }
-                // debug();
+                back_from_jump:
+                cpy(reg1, &reg2);
                 if (is_add) {
                     full_add(reg1, reg3, &reg1);
                 } 
@@ -760,19 +772,37 @@ int main(int argc, char* argv[]){
                 }
                 else if (is_div) {
                     divs(reg1, reg3, &reg1);
+                } 
+                else if (is_mod) {
+                    mods(reg1, reg3, &reg1);
                 }
-                assign_0(reg3);
             }
         }
     }
 
-    // assign_65(reg1);
-    // assign_1(reg2);
-    
-    // // mul(reg1, reg2, &reg1);
-    // sqrts(reg1, reg2, &reg1);
-
+    // tampilkan hasil
     print_reg(reg1);
+    exit(0);
+
+    // segmen kode di bawah dijalankan ketika pembacaan 'r'
+    sqrt_calc:
+        while ((c = fgetc(file)) != BLANK && c != EOF) {
+            insert_digit(reg3, c, &reg3);
+        }
+        sqrts(reg3, reg2, &reg3);
+        goto back_from_jump;
+
+    // segmen kode di bawah ini dijalankan ketika pembacaan '^'.
+    pow_calc:
+        assign_0(reg1);
+        while (c != BLANK && c != EOF) {
+            insert_digit(reg1, c, &reg1);
+            c = fgetc(file);
+        }
+        pows(reg3, reg1, &reg3);
+        cpy(reg2, &reg1);
+        reg4.bit5 = 0; // turn off flag
+        goto back_from_jump;
 
     return 0;
 }
