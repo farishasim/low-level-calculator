@@ -376,10 +376,6 @@ void ge(reg rega, reg regb) {
     lt(regb, rega);
 }
 
-// void bit_xor(unsigned int * bitx, unsigned int bit1, unsigned int bit2) {
-//     *bitx = (bit1 || bit2) && !(bit2 && bit2);
-// }
-
 void and(reg rega, reg regb, reg * rego) {
     rego->bit1 = rega.bit1 && regb.bit1;
     rego->bit2 = rega.bit2 && regb.bit2;
@@ -591,23 +587,23 @@ void pows(reg rega, reg regb, reg * res) {
     if (!is_zero(regb)) goto loop;  // until: regb == 0
 }
 
-void sqrts(reg rega, reg temp, reg * res) {
+void sqrts(reg rega, reg regb, reg * res) {
     assign_0(*res);
 
-    mul(*res, *res, &temp);
+    mul(*res, *res, &regb);
 
     loop:
-        if (eq(temp, rega)) {
+        if (eq(regb, rega)) {       
             goto exit;
         } 
-        gt(temp, rega);
+        gt(regb, rega);
         if (reg4.bit1) {
             decr(res);
             goto exit;
         }
         incr(res);
-        mul(*res, *res, &temp);
-        if (is_zero(temp)) {    // ada overflow ketika res = 16,
+        mul(*res, *res, &regb);
+        if (is_zero(regb)) {    // ada overflow ketika res = 16,
             decr(res);          // looping dihentikan dengan res = 15;
             goto exit;
         }
@@ -717,8 +713,6 @@ void set_operator(char c) {
 #define is_div (!reg4.bit2 && reg4.bit3 && reg4.bit4)
 #define is_mod (reg4.bit2 && !reg4.bit3 && !reg4.bit4)
 #define is_pow (reg4.bit5)
-// #define is_pow (reg4.bit2 && !reg4.bit3 && reg4.bit4)
-// #define is_sqr (reg4.bit2 && reg4.bit3 && !reg4.bit4)
 
 void debug() {
     printf("=== DEBUG ===\n");
